@@ -19,18 +19,58 @@ class HealthDataFetcher {
             throw HKError(.errorHealthDataUnavailable)
         }
 
-        let types: Set = [
-            HKQuantityType(.stepCount),
-            HKQuantityType(.appleExerciseTime),
-            HKQuantityType(.bodyMass),
-            HKQuantityType(.heartRate),
-            HKQuantityType(.restingHeartRate),
-            HKQuantityType(.bloodPressureSystolic),
-            HKQuantityType(.bloodPressureDiastolic),
-            HKCategoryType(.sleepAnalysis)
+        let types: Set<HKObjectType> = [
+            HKObjectType.characteristicType(forIdentifier: .biologicalSex)!,
+            HKQuantityType.quantityType(forIdentifier: .stepCount)!,
+            HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)!,
+            HKQuantityType.quantityType(forIdentifier: .bodyMass)!,
+            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
+            HKQuantityType.quantityType(forIdentifier: .restingHeartRate)!,
+            HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic)!,
+            HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic)!,
+            HKCategoryType.categoryType(forIdentifier: .sleepAnalysis)!
         ]
 
         try await healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: types)
+    }
+    
+    /// Fetches the user's biological sex.
+    ///
+    /// - Returns: The `HKBiologicalSex` value representing the user's biological sex.
+    /// - Throws: `HealthDataFetcherError` if the data cannot be fetched.
+    func fetchBiologicalSex() async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            do {
+                let biologicalSexObject = try healthStore.biologicalSex()
+                let biologicalSex = biologicalSexObject.biologicalSex
+
+                // Convert HKBiologicalSex to a string representation
+                var biologicalSexString = ""
+
+                switch biologicalSex {
+                case .notSet:
+                    print("Biological sex is not set in HealthKit.")
+                    biologicalSexString = "Not Set"
+                case .female:
+                    print("Biological sex retrieved from HealthKit: Female.")
+                    biologicalSexString = "Female"
+                case .male:
+                    print("Biological sex retrieved from HealthKit: Male.")
+                    biologicalSexString = "Male"
+                case .other:
+                    print("Biological sex retrieved from HealthKit: Other.")
+                    biologicalSexString = "Other"
+                @unknown default:
+                    print("Biological sex retrieved from HealthKit: Unknown value.")
+                    biologicalSexString = "Unknown"
+                }
+
+                continuation.resume(returning: biologicalSexString)
+            } catch {
+                print("Error fetching biological sex from HealthKit: \(error.localizedDescription)")
+                continuation.resume(throwing: error)
+            }
+        }
     }
 
     /// Fetches the user's health data for the specified quantity type identifier for the last two weeks.

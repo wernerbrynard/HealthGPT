@@ -16,6 +16,7 @@ struct BloodPressureReading: Codable {
 
 struct HealthData: Codable {
     var date: String
+    var biologicalSex: String
     var steps: Double?
     var activeEnergy: Double?
     var exerciseMinutes: Double?

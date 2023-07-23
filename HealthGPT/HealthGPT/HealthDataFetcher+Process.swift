@@ -25,18 +25,20 @@ extension HealthDataFetcher {
 
         // Create an array of HealthData objects for the last 14 days
         for day in 1...14 {
-            guard let endDate = calendar.date(byAdding: .day, value: -day, to: today) else { continue }
-            healthData.append(
-                HealthData(
-                    date: DateFormatter.localizedString(from: endDate, dateStyle: .short, timeStyle: .none)
-                )
-            )
-        }
+             guard let endDate = calendar.date(byAdding: .day, value: -day, to: today) else { continue }
+             healthData.append(
+                 HealthData(
+                     date: DateFormatter.localizedString(from: endDate, dateStyle: .short, timeStyle: .none),
+                     biologicalSex: "" // Initialize with an empty string. We will update it later.
+                 )
+             )
+         }
 
         healthData = healthData.reversed()
 
         print("Processed Health Data: \(healthData)")
         
+        async let biologicalSex = fetchBiologicalSex()
         async let stepCounts = fetchLastTwoWeeksStepCount()
         async let sleepHours = fetchLastTwoWeeksSleep()
         async let caloriesBurned = fetchLastTwoWeeksActiveEnergy()
@@ -46,6 +48,7 @@ extension HealthDataFetcher {
         async let restingHeartRates = fetchLastTwoWeeksRestingHeartRate()
         async let bloodPressures = fetchLastTwoWeeksBloodPressure()
 
+        let fetchedBiologicalSex = try? await biologicalSex
         let fetchedStepCounts = try? await stepCounts
         let fetchedSleepHours = try? await sleepHours
         let fetchedCaloriesBurned = try? await caloriesBurned
@@ -54,6 +57,11 @@ extension HealthDataFetcher {
         let fetchedHeartRates = try? await heartRates
         let fetchedRestingHeartRates = try? await restingHeartRates
         let fetchedBloodPressures = try? await bloodPressures
+        
+        // Update biological sex for all entries (since it's the same value for all days)
+        for index in 0..<healthData.count {
+            healthData[index].biologicalSex = fetchedBiologicalSex ?? "Not Set"
+        }
 
         print("Fetched Blood Pressures Directly After Fetching: \(String(describing: fetchedBloodPressures))")
 
@@ -63,7 +71,7 @@ extension HealthDataFetcher {
             // Normalize the date to the start of the day
             let startOfDayDate = calendar.startOfDay(for: currentDate)
             
-            print("Checking for date: \(startOfDayDate)")  // Print for debugging
+            print("Checking for date: \(startOfDayDate)")
 
             healthData[day].steps = fetchedStepCounts?[day]
             healthData[day].sleepHours = fetchedSleepHours?[day]

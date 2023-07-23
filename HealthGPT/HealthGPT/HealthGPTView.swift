@@ -35,7 +35,7 @@ struct HealthGPTView: View {
                 MessageInputView()
                     .environmentObject(messageManager)
             }
-            .navigationBarTitle("HealthGPT")
+            .navigationBarTitle("Wellness Guide")
             .alert(isPresented: $showAlert) {
                 Alert(
                     title: Text("Alert"),
