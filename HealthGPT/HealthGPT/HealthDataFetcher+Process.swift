@@ -43,6 +43,7 @@ extension HealthDataFetcher {
         async let exerciseTime = fetchLastTwoWeeksExerciseTime()
         async let bodyMass = fetchLastTwoWeeksBodyWeight()
         async let heartRates = fetchLastTwoWeeksHeartRate()
+        async let restingHeartRates = fetchLastTwoWeeksRestingHeartRate()
         async let bloodPressures = fetchLastTwoWeeksBloodPressure()
 
         let fetchedStepCounts = try? await stepCounts
@@ -51,6 +52,7 @@ extension HealthDataFetcher {
         let fetchedExerciseTime = try? await exerciseTime
         let fetchedBodyMass = try? await bodyMass
         let fetchedHeartRates = try? await heartRates
+        let fetchedRestingHeartRates = try? await restingHeartRates
         let fetchedBloodPressures = try? await bloodPressures
 
         print("Fetched Blood Pressures Directly After Fetching: \(String(describing: fetchedBloodPressures))")
@@ -69,6 +71,7 @@ extension HealthDataFetcher {
             healthData[day].exerciseMinutes = fetchedExerciseTime?[day]
             healthData[day].bodyWeight = fetchedBodyMass?[day]
             healthData[day].heartRate = fetchedHeartRates?[day]
+            healthData[day].restingHeartRate = fetchedRestingHeartRates?[day]
 
             // Match based on the start of the day
             for (date, readings) in fetchedBloodPressures ?? [:] {

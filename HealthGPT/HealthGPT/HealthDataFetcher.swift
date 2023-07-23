@@ -8,7 +8,6 @@
 
 import HealthKit
 
-
 class HealthDataFetcher {
     private let healthStore = HKHealthStore()
 
@@ -25,9 +24,10 @@ class HealthDataFetcher {
             HKQuantityType(.appleExerciseTime),
             HKQuantityType(.bodyMass),
             HKQuantityType(.heartRate),
-            HKCategoryType(.sleepAnalysis),
+            HKQuantityType(.restingHeartRate),
             HKQuantityType(.bloodPressureSystolic),
-            HKQuantityType(.bloodPressureDiastolic)
+            HKQuantityType(.bloodPressureDiastolic),
+            HKCategoryType(.sleepAnalysis)
         ]
 
         try await healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: types)
@@ -72,9 +72,11 @@ class HealthDataFetcher {
             from: Date().twoWeeksAgoStartOfDay(),
             to: Date.startOfDay()
         ) { statistics, _ in
-            if let quantity = statistics.sumQuantity() {
-                dailyData.append(quantity.doubleValue(for: unit))
+            if let quantityValue = statistics.sumQuantity()?.doubleValue(for: unit) {
+                print("Date: \(statistics.startDate), \(identifier.rawValue): \(quantityValue)")
+                dailyData.append(quantityValue)
             } else {
+                print("Date: \(statistics.startDate), \(identifier.rawValue): None")
                 dailyData.append(0)
             }
         }
@@ -137,6 +139,14 @@ class HealthDataFetcher {
     func fetchLastTwoWeeksHeartRate() async throws -> [Double] {
         try await fetchLastTwoWeeksQuantityData(
             for: .heartRate,
+            unit: HKUnit.count().unitDivided(by: HKUnit.minute()),
+            options: [.discreteAverage]
+        )
+    }
+    
+    func fetchLastTwoWeeksRestingHeartRate() async throws -> [Double] {
+        try await fetchLastTwoWeeksQuantityData(
+            for: .restingHeartRate,
             unit: HKUnit.count().unitDivided(by: HKUnit.minute()),
             options: [.discreteAverage]
         )
