@@ -25,7 +25,9 @@ class HealthDataFetcher {
             HKQuantityType(.appleExerciseTime),
             HKQuantityType(.bodyMass),
             HKQuantityType(.heartRate),
-            HKCategoryType(.sleepAnalysis)
+            HKCategoryType(.sleepAnalysis),
+            HKQuantityType(.bloodPressureSystolic),
+            HKQuantityType(.bloodPressureDiastolic)
         ]
 
         try await healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: types)
@@ -135,7 +137,7 @@ class HealthDataFetcher {
     func fetchLastTwoWeeksHeartRate() async throws -> [Double] {
         try await fetchLastTwoWeeksQuantityData(
             for: .heartRate,
-            unit: .count(),
+            unit: HKUnit.count().unitDivided(by: HKUnit.minute()),
             options: [.discreteAverage]
         )
     }
@@ -182,6 +184,48 @@ class HealthDataFetcher {
         }
         
         return dailySleepData
+    }
+    
+    /// Fetches the user's blood pressure data for the last two weeks.
+    ///
+    /// - Returns: An array of tuples representing daily systolic and diastolic blood pressures.
+    /// - Throws: `HealthDataFetcherError` if the data cannot be fetched.
+    func fetchLastTwoWeeksBloodPressure() async throws -> [Date: [(systolic: Double, diastolic: Double)]] {
+        return try await withCheckedThrowingContinuation { continuation in
+            var dailyData: [Date: [(systolic: Double, diastolic: Double)]] = [:]
+
+            let predicate = createLastTwoWeeksPredicate()
+            let bloodPressureType = HKCorrelationType.correlationType(forIdentifier: .bloodPressure)!
+
+            let query = HKSampleQuery(
+                sampleType: bloodPressureType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                for sample in samples as! [HKCorrelation] {
+                    let date = sample.startDate
+                    let systolicSample = sample.objects(for: HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic)!).first as! HKQuantitySample
+                    let diastolicSample = sample.objects(for: HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic)!).first as! HKQuantitySample
+                    
+                    let systolicValue = systolicSample.quantity.doubleValue(for: HKUnit.millimeterOfMercury())
+                    let diastolicValue = diastolicSample.quantity.doubleValue(for: HKUnit.millimeterOfMercury())
+                    
+                    if dailyData[date] == nil {
+                        dailyData[date] = []
+                    }
+                    dailyData[date]!.append((systolic: systolicValue, diastolic: diastolicValue))
+                }
+                continuation.resume(returning: dailyData)
+            }
+
+            healthStore.execute(query)
+        }
     }
 
     private func createLastTwoWeeksPredicate() -> NSPredicate {

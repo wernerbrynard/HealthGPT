@@ -51,6 +51,14 @@ class PromptGenerator {
         if let bodyWeight = dayData.bodyWeight {
             dayPrompt += " \(bodyWeight) lbs of body weight,"
         }
+        if let heartRate = dayData.heartRate {
+            dayPrompt += " \(heartRate) bpm average heart rate,"
+        }
+        if let bloodPressureReadings = dayData.bloodPressures, let bloodPressureReading = bloodPressureReadings.first {
+            dayPrompt += " \(bloodPressureReading.systolic) systolic blood pressure,"
+            dayPrompt += " \(bloodPressureReading.diastolic) diastolic blood pressure,"
+        }
+
         return dayPrompt
     }
 }

@@ -35,24 +35,47 @@ extension HealthDataFetcher {
 
         healthData = healthData.reversed()
 
+        print("Processed Health Data: \(healthData)")
+        
         async let stepCounts = fetchLastTwoWeeksStepCount()
         async let sleepHours = fetchLastTwoWeeksSleep()
         async let caloriesBurned = fetchLastTwoWeeksActiveEnergy()
         async let exerciseTime = fetchLastTwoWeeksExerciseTime()
         async let bodyMass = fetchLastTwoWeeksBodyWeight()
+        async let heartRates = fetchLastTwoWeeksHeartRate()
+        async let bloodPressures = fetchLastTwoWeeksBloodPressure()
 
         let fetchedStepCounts = try? await stepCounts
         let fetchedSleepHours = try? await sleepHours
         let fetchedCaloriesBurned = try? await caloriesBurned
         let fetchedExerciseTime = try? await exerciseTime
         let fetchedBodyMass = try? await bodyMass
+        let fetchedHeartRates = try? await heartRates
+        let fetchedBloodPressures = try? await bloodPressures
+
+        print("Fetched Blood Pressures Directly After Fetching: \(String(describing: fetchedBloodPressures))")
 
         for day in 0...13 {
+            guard let currentDate = calendar.date(byAdding: .day, value: -day, to: today) else { continue }
+
+            // Normalize the date to the start of the day
+            let startOfDayDate = calendar.startOfDay(for: currentDate)
+            
+            print("Checking for date: \(startOfDayDate)")  // Print for debugging
+
             healthData[day].steps = fetchedStepCounts?[day]
             healthData[day].sleepHours = fetchedSleepHours?[day]
             healthData[day].activeEnergy = fetchedCaloriesBurned?[day]
             healthData[day].exerciseMinutes = fetchedExerciseTime?[day]
             healthData[day].bodyWeight = fetchedBodyMass?[day]
+            healthData[day].heartRate = fetchedHeartRates?[day]
+
+            // Match based on the start of the day
+            for (date, readings) in fetchedBloodPressures ?? [:] {
+                if let index = healthData.firstIndex(where: { $0.date == DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .none) }) {
+                    healthData[index].bloodPressures = readings.map { BloodPressureReading(systolic: $0.systolic, diastolic: $0.diastolic) }
+                }
+            }
         }
 
         return healthData

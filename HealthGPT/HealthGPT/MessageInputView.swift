@@ -18,7 +18,7 @@ struct MessageInputView: View {
     var body: some View {
         HStack {
             TextField(
-                messageManager.isQuerying ? "HealthGPT is thinking 🤔..." : "Type a message...",
+                messageManager.isQuerying ? "Your wellness guide is thinking 🤔..." : "Type a message...",
                 text: $userMessage,
                 axis: .vertical
             )

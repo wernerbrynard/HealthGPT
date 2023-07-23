@@ -9,6 +9,10 @@
 
 import Foundation
 
+struct BloodPressureReading: Codable {
+    var systolic: Double
+    var diastolic: Double
+}
 
 struct HealthData: Codable {
     var date: String
@@ -18,4 +22,5 @@ struct HealthData: Codable {
     var bodyWeight: Double?
     var sleepHours: Double?
     var heartRate: Double?
+    var bloodPressures: [BloodPressureReading]?
 }
