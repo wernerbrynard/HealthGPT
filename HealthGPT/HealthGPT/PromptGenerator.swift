@@ -6,9 +6,7 @@
 // SPDX-License-Identifier: MIT
 //
 
-
 import Foundation
-
 
 class PromptGenerator {
     var healthData: [HealthData]
@@ -19,7 +17,7 @@ class PromptGenerator {
 
     func buildMainPrompt() -> String {
         let today = DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .none)
-        var mainPrompt = "You are WellnessWoozy, an enthusiastic, expert caretaker with a deep understanding in personal health. Given the context, provide a short response that could answer the user's question. Do NOT provide statistics. If numbers seem low, provide advice on how they can improve.\n\nSome health metrics over the past two weeks (14 days) to incorporate is given below. If a value is zero, the user has not inputted anything for that day. Today is \(today). Note that you do not have data about the current day.\n\n"
+        var mainPrompt = "You are WellnessGuide, an enthusiastic, expert caretaker with a deep understanding in personal health. Given the context, provide a short response that could answer the user's question. Do NOT provide statistics. If numbers seem low, provide advice on how they can improve.\n\nSome health metrics over the past two weeks (14 days) to incorporate are given below. If a value is zero, the user has not inputted anything for that day. Today is \(today). Note that you do not have data about the current day.\n\n"
         mainPrompt += buildFourteenDaysHealthDataPrompt()
         return mainPrompt
     }
@@ -38,7 +36,7 @@ class PromptGenerator {
         var dayPrompt = "Biological sex: \(dayData.biologicalSex),"
 
         if let steps = dayData.steps {
-            dayPrompt += "\(Int(steps)) steps,"
+            dayPrompt += " \(Int(steps)) steps,"
         }
         if let sleepHours = dayData.sleepHours {
             dayPrompt += " \(Int(sleepHours)) hours of sleep,"
@@ -50,18 +48,21 @@ class PromptGenerator {
             dayPrompt += " \(Int(exerciseMinutes)) minutes of exercise,"
         }
         if let bodyWeight = dayData.bodyWeight {
-            dayPrompt += " \(bodyWeight) lbs of body weight,"
+            dayPrompt += " \(String(format: "%.2f", bodyWeight)) lbs of body weight,"
         }
         if let heartRate = dayData.heartRate {
-            dayPrompt += " \(heartRate) bpm average heart rate,"
+            dayPrompt += " \(Int(heartRate)) bpm average heart rate,"
         }
         if let restingHeartRate = dayData.restingHeartRate {
-            dayPrompt += " \(restingHeartRate) bpm average resting heart rate,"
+            dayPrompt += " \(Int(restingHeartRate)) bpm average resting heart rate,"
         }
         if let bloodPressureReadings = dayData.bloodPressures, let bloodPressureReading = bloodPressureReadings.first {
-            dayPrompt += " \(bloodPressureReading.systolic) systolic blood pressure,"
-            dayPrompt += " \(bloodPressureReading.diastolic) diastolic blood pressure,"
+            dayPrompt += " \(Int(bloodPressureReading.systolic)) systolic blood pressure,"
+            dayPrompt += " \(Int(bloodPressureReading.diastolic)) diastolic blood pressure,"
         }
+
+        // Remove the trailing comma for better formatting
+        dayPrompt = String(dayPrompt.dropLast())
 
         return dayPrompt
     }

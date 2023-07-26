@@ -8,7 +8,7 @@
 
 
 import Foundation
-
+import HealthKit
 
 extension HealthDataFetcher {
     /// Fetches and processes health data for the last 14 days.
@@ -38,6 +38,18 @@ extension HealthDataFetcher {
 
         print("Processed Health Data: \(healthData)")
         
+//        fetchLatestHeartRateSample { (sample, error) in
+//            guard let sample = sample else {
+//                print("Failed to fetch heart rate:", error ?? "No error")
+//                return
+//            }
+//            
+//            let heartRateUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+//            let heartRate = sample.quantity.doubleValue(for: heartRateUnit)
+//            
+//            print("Latest heart rate:", heartRate)
+//        }
+        
         async let biologicalSex = fetchBiologicalSex()
         async let stepCounts = fetchLastTwoWeeksStepCount()
         async let sleepHours = fetchLastTwoWeeksSleep()
@@ -55,6 +67,7 @@ extension HealthDataFetcher {
         let fetchedExerciseTime = try? await exerciseTime
         let fetchedBodyMass = try? await bodyMass
         let fetchedHeartRates = try? await heartRates
+        print("Available dates in fetchedHeartRates: \(fetchedHeartRates?.keys)")
         let fetchedRestingHeartRates = try? await restingHeartRates
         let fetchedBloodPressures = try? await bloodPressures
         
@@ -65,8 +78,11 @@ extension HealthDataFetcher {
 
         print("Fetched Blood Pressures Directly After Fetching: \(String(describing: fetchedBloodPressures))")
 
+        let heartRateDateStrings = fetchedHeartRates?.map { DateFormatter.localizedString(from: $0.0, dateStyle: .short, timeStyle: .none) }
+
         for day in 0...13 {
             guard let currentDate = calendar.date(byAdding: .day, value: -day, to: today) else { continue }
+            let currentDateString = DateFormatter.localizedString(from: currentDate, dateStyle: .short, timeStyle: .none)
 
             // Normalize the date to the start of the day
             let startOfDayDate = calendar.startOfDay(for: currentDate)
@@ -78,7 +94,18 @@ extension HealthDataFetcher {
             healthData[day].activeEnergy = fetchedCaloriesBurned?[day]
             healthData[day].exerciseMinutes = fetchedExerciseTime?[day]
             healthData[day].bodyWeight = fetchedBodyMass?[day]
-            healthData[day].heartRate = fetchedHeartRates?[day]
+            print("Checking currentDate: \(currentDate)")
+            print("Checking for date: \(startOfDayDate)")
+            if let heartRateValues = fetchedHeartRates?[startOfDayDate] {
+                let averageHeartRate = heartRateValues.reduce(0.0, +) / Double(heartRateValues.count)
+                healthData[day].heartRate = averageHeartRate
+            } else {
+                if fetchedHeartRates != nil {
+                    print("Heart rate data unavailable for \(startOfDayDate). Available keys: \(fetchedHeartRates!.keys)")
+                } else {
+                    print("fetchedHeartRates is nil for \(startOfDayDate)")
+                }
+            }
             healthData[day].restingHeartRate = fetchedRestingHeartRates?[day]
 
             // Match based on the start of the day

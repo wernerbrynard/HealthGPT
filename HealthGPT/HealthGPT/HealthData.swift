@@ -6,7 +6,6 @@
 // SPDX-License-Identifier: MIT
 //
 
-
 import Foundation
 
 struct BloodPressureReading: Codable {
@@ -15,7 +14,7 @@ struct BloodPressureReading: Codable {
 }
 
 struct HealthData: Codable {
-    var date: String
+    var date: String  // Represents the date for the entire health data of the day.
     var biologicalSex: String
     var steps: Double?
     var activeEnergy: Double?

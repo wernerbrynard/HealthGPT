@@ -171,17 +171,74 @@ class HealthDataFetcher {
             options: [.discreteAverage]
         )
     }
+    
+//    func fetchLatestHeartRateSample(completion: @escaping (HKQuantitySample?, Error?) -> Swift.Void) {
+//        let sampleType = HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.heartRate)!
+//        let predicate = HKQuery.predicateForSamples(withStart: Date.distantPast, end: Date(), options: .strictStartDate)
+//        
+//        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+//        
+//        let query = HKSampleQuery(sampleType: sampleType, predicate: predicate, limit: 1, sortDescriptors: [sortDescriptor]) { (_, results, error) in
+//            if let sample = results?.first as? HKQuantitySample {
+//                completion(sample, nil)
+//            } else {
+//                completion(nil, error)
+//            }
+//        }
+//        
+//        healthStore.execute(query)
+//    }
 
-    /// Fetches the user's heart rate data for the last two weeks.
+    /// Converts a Unix timestamp to a Date object.
+    func convertTimestampToDate(timestamp: Double) -> Date {
+        // Convert the timestamp from the UNIX epoch (1970) rather than the macOS epoch (2001)
+        return Date(timeIntervalSince1970: timestamp)
+    }
+    
+    /// Fetches the user's heart rate samples for the last two weeks.
     ///
-    /// - Returns: An array of `Double` values representing daily average heart rates.
+    /// - Returns: A dictionary with `Date` keys and an array of `Double` values representing all heart rate samples for each day.
     /// - Throws: `HealthDataFetcherError` if the data cannot be fetched.
-    func fetchLastTwoWeeksHeartRate() async throws -> [Double] {
-        try await fetchLastTwoWeeksQuantityData(
-            for: .heartRate,
-            unit: HKUnit.count().unitDivided(by: HKUnit.minute()),
-            options: [.discreteAverage]
-        )
+    func fetchLastTwoWeeksHeartRate() async throws -> [Date: [Double]] {
+        print("Starting heart rate samples fetch...")
+
+        guard let quantityType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+            throw HealthDataFetcherError.invalidObjectType
+        }
+
+        let endDate = Date()
+        let startDate = Calendar.current.date(byAdding: .day, value: -14, to: endDate)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: quantityType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+            ) { (query: HKSampleQuery, samples: [HKSample]?, error: Error?) in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                var dailySamples: [Date: [Double]] = [:]
+
+                for sample in samples as! [HKQuantitySample] {
+                    let date = Calendar.current.startOfDay(for: sample.startDate)
+                    let heartRateValue = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute()))
+
+                    if dailySamples[date] == nil {
+                        dailySamples[date] = []
+                    }
+                    dailySamples[date]!.append(heartRateValue)
+                }
+
+                continuation.resume(returning: dailySamples)
+            }
+            healthStore.execute(query)
+        }
     }
     
     func fetchLastTwoWeeksRestingHeartRate() async throws -> [Double] {
@@ -278,9 +335,19 @@ class HealthDataFetcher {
         }
     }
 
+//    private func createLastTwoWeeksPredicate() -> NSPredicate {
+//        let now = Date()
+//        let startDate = Calendar.current.date(byAdding: DateComponents(day: -14), to: now) ?? Date()
+//        return HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+//    }
+    
     private func createLastTwoWeeksPredicate() -> NSPredicate {
-        let now = Date()
-        let startDate = Calendar.current.date(byAdding: DateComponents(day: -14), to: now) ?? Date()
-        return HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+        let endDate = Date()
+        let startDate = Calendar.current.date(byAdding: .day, value: -14, to: endDate)!
+
+        print("Calculated Start Date: \(startDate)")
+        print("Calculated End Date: \(endDate)")
+
+        return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
     }
 }

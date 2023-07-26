@@ -47,11 +47,11 @@ struct MessageInputView: View {
             Button(action: {
                 showingSheet.toggle()
             }) {
-                Image(systemName: "gearshape.fill")
+                Image(systemName: "ellipsis.circle.fill")
                     .padding(.horizontal, 10)
             }
             .sheet(isPresented: $showingSheet) {
-                SettingsView()
+                ChatOptionsView()
             }
         }
         .padding(10)
